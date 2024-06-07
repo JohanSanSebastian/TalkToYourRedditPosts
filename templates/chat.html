@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit AI Conversation</title>
+    <style>
+        :root {
+            --background-color: #0d0d0d;
+            --text-color: #d7dadc;
+            --user-message-bg: #0059ff;
+            --ai-message-bg: #1a1a1a;
+            --input-bg: #000;
+            --button-bg: #ff4500;
+            --border-color: #343536;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .chat {
+            margin-bottom: 20px;
+        }
+        .user-message, .ai-message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+            max-width: 60%;
+            word-wrap: break-word;
+        }
+        .user-message {
+            background-color: var(--user-message-bg);
+            align-self: flex-end;
+            color: #fff;
+        }
+        .ai-message {
+            background-color: var(--ai-message-bg);
+            align-self: flex-start;
+        }
+        .input-container {
+            display: flex;
+            border-top: 1px solid var(--border-color);
+            padding: 10px;
+            background-color: var(--background-color);
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+        }
+        button {
+            padding: 10px 15px;
+            margin-left: 10px;
+            border: none;
+            background-color: var(--button-bg);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+    <!-- Include the marked.js library from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="container" id="conversation"></div>
+    <div class="input-container">
+        <input type="text" id="userInput" placeholder="Ask something..." />
+        <button onclick="askQuestion()">Send</button>
+    </div>
+
+    <script>
+        let conversationHistory = '';
+        const redditUrl = new URLSearchParams(window.location.search).get('reddit_url');
+
+        async function fetchRedditData() {
+            const response = await fetch(`/fetch_reddit?reddit_url=${encodeURIComponent(redditUrl)}`);
+            const data = await response.json();
+            if (data.combined_texts) {
+                conversationHistory = data.combined_texts;
+                // Generate a summary using the chat AI
+                const summaryResponse = await fetch('/ask_ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: "Generate summary based on post and then comments",
+                        conversation_history: conversationHistory
+                    })
+                });
+                const summaryData = await summaryResponse.json();
+                const summary = summaryData.ai_response;
+
+                addMessageToChat('AI', summary, true); // Add summary as the first message
+                // addMessageToChat('AI', conversationHistory, true); // Add the rest of the conversation
+            } else {
+                alert('Error fetching Reddit data: ' + data.status_code);
+            }
+        }
+
+
+        function addMessageToChat(sender, message, isMarkdown = false) {
+            const conversation = document.getElementById('conversation');
+            const messageElement = document.createElement('div');
+            messageElement.className = sender === 'User' ? 'user-message chat' : 'ai-message chat';
+            
+            if (isMarkdown) {
+                messageElement.innerHTML = marked.parse(message);
+            } else {
+                messageElement.innerText = message;
+            }
+            
+            conversation.appendChild(messageElement);
+            conversation.scrollTop = conversation.scrollHeight;
+        }
+
+        async function askQuestion() {
+            const userInput = document.getElementById('userInput').value;
+            if (!userInput) return;
+
+            addMessageToChat('User', userInput);
+
+            const response = await fetch('/ask_ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: userInput,
+                    conversation_history: conversationHistory
+                })
+            });
+
+            const data = await response.json();
+            conversationHistory = data.conversation_history;
+            addMessageToChat('AI', data.ai_response, true);
+
+            document.getElementById('userInput').value = '';
+        }
+
+        document.getElementById('userInput').addEventListener('keydown', function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                askQuestion();
+            }
+        });
+
+        window.onload = fetchRedditData;
+    </script>
+</body>
+</html>

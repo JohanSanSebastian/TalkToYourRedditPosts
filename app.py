@@ -96,4 +96,5 @@ def ask_ai():
     return jsonify({"ai_response": ai_response.text.strip(), "conversation_history": combined_input + "\n\nAI Answer: " + ai_response.text.strip()})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=8080)

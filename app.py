@@ -4,7 +4,7 @@ from curl_cffi import requests
 import json
 
 # Configure the Google Generative AI with your API key
-genai.configure(api_key='AIzaSyAissym6sFqnDRh_IMeanC2DGUc-2qOsUg')
+genai.configure(api_key='')
 
 app = Flask(__name__)
 

@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 import google.generativeai as genai
-import requests
+from curl_cffi import requests
 import json
 
 # Configure the Google Generative AI with your API key
@@ -54,7 +54,7 @@ def chat():
 def chat_page():
     reddit_url = request.args.get('reddit_url')
     reddit_json_url = reddit_url + '.json'
-    response = requests.get(reddit_json_url, headers={'User-agent': 'your bot 0.1'})
+    response = requests.get(reddit_json_url, headers={'User-agent': 'your bot 0.1'}, impersonate="chrome")
 
     if response.status_code == 200:
         json_data = response.text
@@ -71,7 +71,7 @@ def chat_page():
 def fetch_reddit():
     reddit_url = request.args.get('reddit_url')
     reddit_json_url = reddit_url + '.json'
-    response = requests.get(reddit_json_url, headers={'User-agent': 'your bot 0.1'})
+    response = requests.get(reddit_json_url, headers={'User-agent': 'your bot 0.1'}, impersonate="chrome")
 
     if response.status_code == 200:
         json_data = response.text

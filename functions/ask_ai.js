@@ -1,6 +1,6 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const apiKey = process.env.API_KEY; // Ensure your API key is set in your environment variables
+const apiKey = "AIzaSyAissym6sFqnDRh_IMeanC2DGUc-2qOsUg"; // Ensure your API key is set in your environment variables
 const genAI = new GoogleGenerativeAI(apiKey);
 
 exports.handler = async (event, context) => {

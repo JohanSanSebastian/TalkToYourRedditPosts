@@ -18,6 +18,14 @@ body {
     color: var(--text-color);
 }
 
+.title {
+    text-align: center;
+    padding: 10px 0;
+    font-size: 24px;
+    color: #ff4500; /* Reddit orange */
+    cursor: pointer;
+}
+
 .container {
     display: flex;
     flex-direction: column;
@@ -73,14 +81,6 @@ button {
     background-color: var(--button-bg);
     color: white;
     border-radius: 5px;
-    cursor: pointer;
-}
-
-.title {
-    text-align: center;
-    padding: 10px 0;
-    font-size: 24px;
-    color: #ff4500; /* Reddit orange */
     cursor: pointer;
 }
 

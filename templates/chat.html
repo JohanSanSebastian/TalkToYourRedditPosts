@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -22,13 +23,6 @@
             margin: 0;
             background-color: var(--background-color);
             color: var(--text-color);
-        }
-        .title {
-            text-align: center;
-            padding: 10px 0;
-            font-size: 24px;
-            color: #ff4500; /* Reddit orange */
-            cursor: pointer;
         }
         .container {
             display: flex;
@@ -80,36 +74,11 @@
             border-radius: 5px;
             cursor: pointer;
         }
-
-        @keyframes loading {
-            0% {
-                content: ".";
-            }
-            25% {
-                content: "..";
-            }
-            50% {
-                content: "...";
-            }
-            75% {
-                content: "..";
-            }
-            100% {
-                content: ".";
-            }
-        }
-
-        .loading::after {
-            display: inline-block;
-            animation: loading 1s steps(1, end) infinite;
-            content: ".";
-        }
     </style>
     <!-- Include the marked.js library from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
-    <div class="title" onclick="goToHomePage()">Talk to your reddit posts</div>
     <div class="container" id="conversation"></div>
     <div class="input-container">
         <input type="text" id="userInput" placeholder="Ask something..." />
@@ -121,36 +90,52 @@
         const redditUrl = new URLSearchParams(window.location.search).get('reddit_url');
 
         async function fetchRedditData() {
-            const response = await fetch(`/api/fetch_reddit?reddit_url=${encodeURIComponent(redditUrl)}`);
+            const response = await fetch(`/fetch_reddit?reddit_url=${encodeURIComponent(redditUrl)}`);
             const data = await response.json();
             if (data.combined_texts) {
-                conversationHistory = `Post and Comments Summary:\n${data.combined_texts}`;
-                const initialSummary = await getAISummary(data.combined_texts);
-                addMessage('ai', initialSummary);
+                conversationHistory = data.combined_texts;
+                // Generate a summary using the chat AI
+                const summaryResponse = await fetch('/ask_ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: "Generate summary based on post and then comments",
+                        conversation_history: conversationHistory
+                    })
+                });
+                const summaryData = await summaryResponse.json();
+                const summary = summaryData.ai_response;
+
+                addMessageToChat('AI', summary, true); // Add summary as the first message
+                // addMessageToChat('AI', conversationHistory, true); // Add the rest of the conversation
+            } else {
+                alert('Error fetching Reddit data: ' + data.status_code);
             }
         }
 
-        async function getAISummary(text) {
-            const response = await fetch('/api/ask_ai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    question: "Can you provide a summary of the following text?",
-                    conversation_history: `Text: ${text}\nAI:`
-                })
-            });
-            const data = await response.json();
-            return data.ai_response;
+
+        function addMessageToChat(sender, message, isMarkdown = false) {
+            const conversation = document.getElementById('conversation');
+            const messageElement = document.createElement('div');
+            messageElement.className = sender === 'User' ? 'user-message chat' : 'ai-message chat';
+            
+            if (isMarkdown) {
+                messageElement.innerHTML = marked.parse(message);
+            } else {
+                messageElement.innerText = message;
+            }
+            
+            conversation.appendChild(messageElement);
+            conversation.scrollTop = conversation.scrollHeight;
         }
 
         async function askQuestion() {
             const userInput = document.getElementById('userInput').value;
-            if (!userInput.trim()) return;
-            
-            addMessage('user', userInput);
-            showLoading();
+            if (!userInput) return;
 
-            const response = await fetch('/api/ask_ai', {
+            addMessageToChat('User', userInput);
+
+            const response = await fetch('/ask_ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -158,47 +143,22 @@
                     conversation_history: conversationHistory
                 })
             });
+
             const data = await response.json();
-            addMessage('ai', data.ai_response);
             conversationHistory = data.conversation_history;
-            hideLoading();
+            addMessageToChat('AI', data.ai_response, true);
+
             document.getElementById('userInput').value = '';
         }
 
-        function addMessage(sender, message) {
-            const conversation = document.getElementById('conversation');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `${sender}-message`;
-            messageDiv.innerHTML = marked.parse(message);
-            conversation.appendChild(messageDiv);
-            conversation.scrollTop = conversation.scrollHeight;
-        }
-
-        function showLoading() {
-            const conversation = document.getElementById('conversation');
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'ai-message loading';
-            loadingDiv.id = 'loading';
-            conversation.appendChild(loadingDiv);
-            conversation.scrollTop = conversation.scrollHeight;
-        }
-
-        function hideLoading() {
-            const loadingDiv = document.getElementById('loading');
-            if (loadingDiv) loadingDiv.remove();
-        }
-
-        function goToHomePage() {
-            window.location.href = "/";
-        }
-
-        document.getElementById('userInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
+        document.getElementById('userInput').addEventListener('keydown', function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
                 askQuestion();
             }
         });
 
-        fetchRedditData();
+        window.onload = fetchRedditData;
     </script>
 </body>
 </html>
